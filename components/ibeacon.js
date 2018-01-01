@@ -6,6 +6,8 @@ var KalmanFilter = require('kalmanjs').default;
 
 var channel = config.get('ibeacon.channel');
 
+var lastUpdateTime = new Date();
+
 function iBeaconScanner(callback) {
     // constructor
     this.callback = callback;
@@ -21,6 +23,14 @@ iBeaconScanner.prototype._init = function () {
 };
 
 iBeaconScanner.prototype._handlePacket = function (ibeacon) {
+
+    var currTime = new Date();
+        if ((currTime - lastUpdateTime) < 1000) {
+            return;
+        }
+    lastUpdateTime = currTime;
+
+
     // check if we have a whitelist
     // and if we do, if this id is listed there
     var whitelist = config.get('ibeacon.whitelist') || [];
@@ -37,7 +47,10 @@ iBeaconScanner.prototype._handlePacket = function (ibeacon) {
 
         // max distance parameter checking
         var maxDistance = config.get('ibeacon.max_distance') || 0;
-        if (maxDistance == 0 || ibeacon.accuracy <= maxDistance) {
+
+        var minPossibleDistance = distance - ibeacon.accuracy;
+
+        if (maxDistance == 0 || minPossibleDistance <= maxDistance) {
             var filteredDistance = this._filter(id, distance);
 
             var payload = {
